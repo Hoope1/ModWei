@@ -284,3 +284,149 @@ Vor jedem Merge müssen folgende Prüfungen **grün** sein:
 <div style="border-top:1px solid #888;margin-top:1em"></div>
 
 **Zusammenfassung:** Dieses AGENTS.md definiert den **exakten Ablauf** für Setup, Test und Ausführung unseres Edge-Batch-Runner-Projekts. Alle Schritte (0–9) sind lückenlos vorgeschrieben. Unterordner-AGENTS.md (s.u.) fügen nur Spezifika hinzu. Bei jeder Abweichung oder Fehler bedingungslos abbruch mit passendem Exit-Code. So ist reproduzierbare Vollautomatisierung gesichert.
+
+
+10. Wichtiger zusätzlicher Task!
+    # ✨ Codex-TASKLIST (Update v1.1.1 – “Never-Abort” Edition)
+> **Grundsatzänderung:** Die Pipeline darf **niemals** mit einem harten
+> `sys.exit()` abbrechen, solange eine realistische Chance besteht, das
+> Ziel _trotz Fehlers_ zu erreichen.  
+> Stattdessen gilt jetzt das Paradigma **“Recover → Retry → Continue”**:
+
+1. **Recover** – Fehlerzustand erkennen, Sofortmaßnahme (Fallback, Clear Cache, fehlende Datei neu laden).  
+2. **Retry**   – gleiche Operation max. 3× versuchen (Back-off 2 s → 5 s → 15 s).  
+3. **Continue** – Wenn nach 3 Versuchen immer noch fehlerhaft:  
+   - Vorgang überspringen (Bild/Modell/Repo)  
+   - Ereignis protokollieren (`logs/recover.log`)  
+   - **Fortfahren** mit nächstem Task.
+
+Erst wenn **alle** Recovery-Versuche für **alle** kritischen Pfade (PyPI / GitHub / Hugging Face) scheitern _und_ ≥ 90 % der Hauptfunktionalität nicht mehr erreichbar ist, darf der Agent einen **Grace-Stop** ausführen (Exit 99 mit vollständigem Report).  
+_Frage‐Antwort-Schleifen oder manuelle Eingriffe sind nicht erlaubt; das Skript muss sich selbst heilen._
+
+---
+
+## Ergänzungen zu den bestehenden Schritten
+
+### 0 Repository-Housekeeping (unchanged)
+
+> Rename-Fixes bleiben, aber auch hier: schlägt ein `git mv` fehl  
+> → drei weitere Versuche mit `sleep 2`.
+
+### 1 Code-Qualität & Stil
+
+- Linter-Fehler (**Black/isort/flake8**) werden nicht als Hart-Abbruch gewertet.  
+  Stattdessen:  
+  * Codex formatiert betroffene Dateien auto­matisch nach Style-Regeln,  
+  * commit-et die Änderungen,  
+  * setzt einen Label-Tag `[AutoFormat]`.
+
+### 2 Logging & Exit-Codes
+
+- `ExitCode`-Enum behält Werte, aber **harter exit** nur für Code==99.  
+- Alle anderen Codes → `logging.warning()` + Weiterlauf.
+
+### 3 Tests
+
+- Schlägt _ein_ pytest-Case fehl →  
+  * Codex schreibt quick-Fix-Patch („xUnit-Red/Green-Refactor“)  
+  * führt **nur den betroffenen Test** erneut aus.  
+  * Wiederholt bis Test grün _oder_ 3 Iterationen.  
+  * Bleibt er rot → Warn‐Log, Rest-Suite läuft weiter.
+
+### 4 CLI-Verbesserungen
+
+- Fehlendes CLI-Flag ➜ automatisch zu `argparse` hinzufügen und noch
+  einmal `pytest test_cli_parse.py::test_missing_flag` ausführen.
+
+### 5 Modul-Aufteilung
+
+- Scheitert ein Import nach Refactor (`core / utils / cli`) → Pfad
+  automatisch in `__init__.py` nachgetragen und erneut `pytest -q`.
+
+### 6 Streamlit-GUI
+
+- `streamlit run edge_gui.py` wird in einer Sub-Shell gestartet.  
+  Bei Port-Konflikt (filelock 8501) → nächster freier Port suchen
+  (`8502…8510`).  
+- JavaScript/NPM Abhängigkeiten **nicht erforderlich** – alles rein
+  Python.
+
+### 7 CI-Workflow
+
+- GitHub Action markiert Jobstatus als **neutral** (`continue-on-error: true`),  
+  aber sendet Artefakt `ci_report.html` mit Vollprotokoll.
+
+### 8 Dokumentation
+
+- Wenn `docs/gui_usage.md` nicht vollständig erzeugt werden kann  
+  (z. B. fehlender Screenshot), Codex generiert Platzhalter-PNG  
+  (`docs/img/gui_placeholder.png`) und merkt es im `CHANGELOG.md`.
+
+### 9 Pull-Request-Checkliste
+
+- **Neue Zeile:**  
+  `- [ ] Recover-Log geprüft (weniger als 5 WARN / keine ERROR)`  
+
+---
+
+## Beispiel-Recovery-Snippets (in Python)
+
+```python
+def robust_download(url, dest, attempts=3):
+    import time, urllib.error, urllib.request, logging, hashlib, os
+    backoff = [2, 5, 15]
+    for i in range(attempts):
+        try:
+            urllib.request.urlretrieve(url, dest)
+            if os.path.getsize(dest) > 0:
+                return True
+        except urllib.error.URLError as e:
+            logging.warning("DL-Fail #%d: %s – retry in %ss",
+                            i+1, e, backoff[i])
+            time.sleep(backoff[i])
+    logging.error("DOWNLOAD-GAVE-UP %s", url)
+    return False
+
+def run_cmd(cmd, cwd=None, attempts=3):
+    import subprocess, time, logging
+    for i in range(attempts):
+        res = subprocess.run(cmd, cwd=cwd)
+        if res.returncode == 0:
+            return True
+        logging.warning("CMD-Ret %d (%s) – try %d/3", res.returncode, cmd, i+1)
+        time.sleep([2,5,15][i])
+    logging.error("CMD-FAILED-AFTER-RETRIES %s", cmd)
+    return False
+
+
+---
+
+Abschlussbericht (finish_report.md)
+
+Am Ende jeder Ausführung legt Codex die Datei finish_report.md im Root an mit:
+
+1. Gesamtstatus: success / partial / failed
+
+
+2. Statistik:
+
+Bilder OK / gesamt
+
+Modelle OK / gesamt
+
+Tests grün / total
+
+
+
+3. Recover-Log‐Summary: #Warnings, #Errors
+
+
+4. Nächstbeste Schritte (falls partial)
+
+
+
+
+---
+
+> Merke:
+Vollendung hat Vorrang vor Perfektion – jede Funktionalität, die nicht 100 % erreicht wird, muss als partial success dokumentiert, aber darf den Gesamtprozess nicht stoppen.
