@@ -4,47 +4,43 @@ on: [push, pull_request]
 jobs:
   fetch-models:
     runs-on: ubuntu-latest
-    name: Fetch and Verify Models
-
     steps:
-      # 1 Code
+      # 1 checkout
       - uses: actions/checkout@v4
 
       # 2 Python
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
-      # 3 Deps (requests + gdown)
-      - name: Install deps
+      # 3 deps
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests gdown
 
-      # 4 Download
+      # 4 download
       - name: Run download_models.py
         run: python download_models.py
 
-      # 5 Hash-Check (nur falls Datei <2 GB, sonst übersprungen)
+      # 5 verify SHA-256 (where we have a checksum)
       - name: Verify hashes
         run: |
           declare -A SHAS
-          SHAS[table5_pidinet.pth]="80860ac267258b5f27486e0ef152a211d0b08120f62aeb185a050acc30da486c"
-          SHAS[first_stage_total_320.pt]="3dbd7b9c77e3c86f87195f21c342dc45ebadd90ffae6f6d5375bc2c665c9fd2d"
-          SHAS[edter_bsds.pth]="c2b84f0c80f15d6d0198d4c477726db44472b4d0282dadba5baba2b04b92851e"
+          SHAS[table5_pidinet.pth]=80860ac267258b5f27486e0ef152a211d0b08120f62aeb185a050acc30da486c
+          SHAS[first_stage_total_320.pt]=3dbd7b9c77e3c86f87195f21c342dc45ebadd90ffae6f6d5375bc2c665c9fd2d
+          SHAS[edter_bsds.pth]=c2b84f0c80f15d6d0198d4c477726db44472b4d0282dadba5baba2b04b92851e
           cd models/weights
           for f in "${!SHAS[@]}"; do
             if [[ -f "$f" ]]; then
               h=$(sha256sum "$f" | cut -d' ' -f1)
-              [[ "$h" == "${SHAS[$f]}" ]] || { echo "::error::Hash mismatch $f"; exit 1; }
+              [[ "$h" == "${SHAS[$f]}" ]] || { echo "::error::SHA mismatch $f"; exit 1; }
               echo "$f OK"
-            else
-              echo "::warning::$f nicht gefunden – großer Mirror evtl. geladen"
             fi
           done
 
-      # 6 Artefakt
+      # 6 upload for downstream jobs
       - uses: actions/upload-artifact@v4
         with:
-          name: model-weights
+          name: edge-model-weights
           path: models/weights
