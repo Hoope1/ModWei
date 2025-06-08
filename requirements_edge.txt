@@ -1,1 +1,8 @@
-
+# Minimal runtime deps (Torch, MMCV, mmseg kommen aus BAT)
+numpy<2
+opencv-python
+Pillow
+tqdm
+requests
+gdown
+accelerate           # für DiffusionEdge
