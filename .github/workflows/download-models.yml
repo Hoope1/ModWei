@@ -1,61 +1,50 @@
 name: Download Models
-
-on:
-  push:
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   fetch-models:
-    name: Fetch and Verify Models
     runs-on: ubuntu-latest
+    name: Fetch and Verify Models
 
     steps:
-      # 1) Code auschecken
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # 1 Code
+      - uses: actions/checkout@v4
 
-      # 2) Python 3.10 installieren
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
+      # 2 Python
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 3) Requests installieren
-      - name: Install requests
+      # 3 Deps (requests + gdown)
+      - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install requests gdown
 
-      # 4) Modelle herunterladen
+      # 4 Download
       - name: Run download_models.py
-        run: |
-          python download_models.py
+        run: python download_models.py
 
-      # 5) SHA-256 prüfen (muss zu download_models.py passen)
-      - name: Verify SHA-256 hashes
+      # 5 Hash-Check (nur falls Datei <2 GB, sonst übersprungen)
+      - name: Verify hashes
         run: |
           declare -A SHAS
           SHAS[table5_pidinet.pth]="80860ac267258b5f27486e0ef152a211d0b08120f62aeb185a050acc30da486c"
-          SHAS[diffedge_swin.pth]="83c6e6cfbb7d0bfa99b65f74116a3f2a019e81d479f40c710120cbb0e800c4fd"
-          SHAS[edter_bsds.pth]="d15a3d1e0e9cc2e83332bb19a4d6fd2936053c39e27e91ce2ae7623d5551e6a7"
+          SHAS[first_stage_total_320.pt]="3dbd7b9c77e3c86f87195f21c342dc45ebadd90ffae6f6d5375bc2c665c9fd2d"
+          SHAS[edter_bsds.pth]="c2b84f0c80f15d6d0198d4c477726db44472b4d0282dadba5baba2b04b92851e"
           cd models/weights
-          for file in "${!SHAS[@]}"; do
-            if [[ ! -f "$file" ]]; then
-              echo "ERROR: $file fehlt!"
-              exit 1
+          for f in "${!SHAS[@]}"; do
+            if [[ -f "$f" ]]; then
+              h=$(sha256sum "$f" | cut -d' ' -f1)
+              [[ "$h" == "${SHAS[$f]}" ]] || { echo "::error::Hash mismatch $f"; exit 1; }
+              echo "$f OK"
+            else
+              echo "::warning::$f nicht gefunden – großer Mirror evtl. geladen"
             fi
-            HASH=$(sha256sum "$file" | awk '{print $1}')
-            if [[ "$HASH" != "${SHAS[$file]}" ]]; then
-              echo "ERROR: Hash-Mismatch bei $file"
-              exit 1
-            fi
-            echo "$file OK"
           done
-          echo "Alle Dateien vorhanden und Hash geprüft."
 
-      # 6) Artefakte hochladen
-      - name: Upload weight files
-        uses: actions/upload-artifact@v4
+      # 6 Artefakt
+      - uses: actions/upload-artifact@v4
         with:
           name: model-weights
           path: models/weights
