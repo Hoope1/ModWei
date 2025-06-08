@@ -1,18 +1,19 @@
-# AGENTS.md  –  Unterordner  /weights
+# AGENTS.md – Unterordner `/weights`
 
-## Aufgabe
-Schutz vor versehentlichem Commit großer Binärdateien und Sicherstellung
-gültiger SHA-256-Checksummen.
+## Zweck
+
+Gewährleisten, dass keine großen Gewichte in Git landen und ihre Integrität geprüft wird.
 
 ### Regeln
-1. **Kein Git-Commit:** Falls Codex versucht, eine *.pth* zu `git add`-en,  
-   → sofort Exit 50 mit Meldung „NO-WEIGHTS-IN-GIT“.
-2. **Download-Check:**  
-   - Wenn Datei fehlt oder ≤ 95 % der Sollgröße → neu herunterladen.  
-   - Danach Hash vergleichen. SOLL-Hashes:
-     - `table5_pidinet.pth` → `<SHA-256-PIDI>`  
-     - `diffedge_swin.pth` → `<SHA-256-DIFF>`  
-     - `edter_bsds.pth`    → `<SHA-256-EDT>`  
-   - Hash-Fail → Datei löschen + zweiter Versuch; scheitert erneut → Exit 51.
-3. **Speicherhygiene:** Ordnergröße ≤ 2 GB; ältere oder ungenutzte
-   Checkpoints nach jeder CI-Runde löschen.
+
+1. **Nie committen:** Wenn versucht wird, eine Datei `*.pth` oder `*.ckpt` zu `git add`en, sofort Exit-Code 50 (“NO-WEIGHTS-IN-GIT”).
+2. **Download & Hash:**
+
+   * Fehlt eine Datei oder ihre Größe < 95 % der erwarteten Größe, lade sie neu per HTTPS (z.B. von Hugging Face).
+   * Anschließend SHA-256 überprüfen:
+
+     * `table5_pidinet.pth`  → `<SHA-256-PIDI>`
+     * `diffedge_swin.pth`  → `<SHA-256-DIFF>`
+     * `edter_bsds.pth`     → `<SHA-256-EDT>`
+   * Bei Hash-Mismatch: Lösche die Datei und wiederhole den Download (max. 2 Versuche). Scheitert es erneut, Abbruch mit Exit 51.
+3. **Speicherhygiene:** Gesamtgröße von `weights/` ≤ 2 GB halten. Nach jedem Release oder CI-Run alte/unbenutzte Checkpoints entfernen.
