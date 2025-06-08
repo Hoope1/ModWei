@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      # 1) Code auschecken
+      # 1) Hol dir den Code
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -44,9 +44,9 @@ jobs:
           done
           echo "Alle Gewichtungsdateien erfolgreich vorhanden."
 
-      # 6) Artefakte hochladen (optional)
+      # 6) Artefakte hochladen mit v4 der Action
       - name: Upload weights as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: model-weights
           path: models/weights
