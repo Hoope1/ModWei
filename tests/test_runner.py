@@ -42,8 +42,12 @@ def test_clear_vram_calls_torch():
 def test_main_runs(monkeypatch, tmp_path):
     calls = {}
     monkeypatch.setattr(ebr, "clone_repo", lambda repo: calls.setdefault("clone", True))
-    monkeypatch.setattr(ebr, "download_weight", lambda url, dst: calls.setdefault("download", True))
-    monkeypatch.setattr(ebr, "process_images", lambda path: calls.setdefault("process", path))
+    monkeypatch.setattr(
+        ebr, "download_weight", lambda url, dst: calls.setdefault("download", True)
+    )
+    monkeypatch.setattr(
+        ebr, "process_images", lambda path: calls.setdefault("process", path)
+    )
     result = ebr.main(["--input", str(tmp_path)])
     assert result == 0
     assert calls["process"] == tmp_path

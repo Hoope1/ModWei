@@ -14,7 +14,11 @@ from typing import Callable, Dict
 
 import cv2
 import numpy as np
-import torch
+
+try:  # pragma: no cover - optional dependency
+    import torch
+except Exception:  # pragma: no cover - no torch available
+    torch = None  # type: ignore
 from loguru import logger
 from tqdm import tqdm
 
@@ -73,7 +77,7 @@ def download_weight(url: str, dst: Path) -> None:  # pragma: no cover
 
 def clear_vram() -> None:
     """Release cached CUDA memory."""
-    if torch.cuda.is_available():
+    if torch is not None and torch.cuda.is_available():
         torch.cuda.empty_cache()
 
 
@@ -161,7 +165,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Batch edge detection")
     parser.add_argument("--input", type=Path, help="Folder with images")
-    parser.add_argument("--streamlit", action="store_true", help="Run with Streamlit GUI")
+    parser.add_argument(
+        "--streamlit", action="store_true", help="Run with Streamlit GUI"
+    )
     args, unknown = parser.parse_known_args(argv)
     if unknown:
         logger.error("Unknown arguments: %s", unknown)
