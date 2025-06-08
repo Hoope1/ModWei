@@ -1,0 +1,18 @@
+# AGENTS.md  –  Unterordner  /weights
+
+## Aufgabe
+Schutz vor versehentlichem Commit großer Binärdateien und Sicherstellung
+gültiger SHA-256-Checksummen.
+
+### Regeln
+1. **Kein Git-Commit:** Falls Codex versucht, eine *.pth* zu `git add`-en,  
+   → sofort Exit 50 mit Meldung „NO-WEIGHTS-IN-GIT“.
+2. **Download-Check:**  
+   - Wenn Datei fehlt oder ≤ 95 % der Sollgröße → neu herunterladen.  
+   - Danach Hash vergleichen. SOLL-Hashes:
+     - `table5_pidinet.pth` → `<SHA-256-PIDI>`  
+     - `diffedge_swin.pth` → `<SHA-256-DIFF>`  
+     - `edter_bsds.pth`    → `<SHA-256-EDT>`  
+   - Hash-Fail → Datei löschen + zweiter Versuch; scheitert erneut → Exit 51.
+3. **Speicherhygiene:** Ordnergröße ≤ 2 GB; ältere oder ungenutzte
+   Checkpoints nach jeder CI-Runde löschen.
