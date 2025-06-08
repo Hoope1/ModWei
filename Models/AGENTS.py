@@ -1,22 +1,15 @@
----
-
-## 2 Feinleitfaden für geklonte Repos (`/Models/AGENTS.md`)
-
-```markdown
-# AGENTS.md  –  Unterordner  /Models
+# AGENTS.md – Unterordner `/Models`
 
 ## Zweck
-1. Verhindern, dass Codex versehentlich Upstream-Code ändert oder committet.
-2. Garantieren, dass Repos **nur** per `git pull` aktualisiert werden, niemals
-   mit “Hand-Edits”.
+
+Verhindern, dass Codex-Agenten unabsichtlich den Modell-Code ändern. Modelle sollen nur über Git-Operationen aktualisiert werden. Unbekannte Änderungen oder Commits sind verboten.
 
 ## Verhaltensregeln
-- **Schreibschutz:** Jede Datei unter /Models gilt als _read-only_.  
-  Änderungen → sofortiger Exit 41.
-- **Update-Pfad:**  
-  - Fehlt ein Repo → `git clone --depth 1 <url>`  
-  - Existiert → `git -C <repo> pull --ff-only`
-- **Patchen?** Nur erlaubt, wenn ein Hash-Mismatch einen _bekannten_
-  Upstream-Bug betrifft. Patch muss vorher in
-  `<repo>/edge_suite_local_patch.diff` existieren.
-- **CI-Linting:** Repos werden von Black/isort ausgenommen.
+
+* **Schreibschutz:** Alles unter `Models/` gilt als schreibgeschützt. Jede Veränderung ohne legitimen Grund führt zu sofortigem Exit-Code 41.
+* **Update-Pfad:**
+
+  * Fehlt ein Modell-Repo-Ordner oder ist leer: `git clone --depth 1 <Repo-URL> Models/<Name>`.
+  * Ist der Ordner vorhanden: `git -C Models/<Name> pull --ff-only`.
+* **Keine Hand-Edits:** Änderungen am Code der Modell-Repos sind **nur** erlaubt, wenn ein bekannter Upstream-Bug existiert und bereits ein Patch in `edge_suite_local_patch.diff` bereitliegt. Sonst sofort Fehler.
+* **CI-Linting:** Model-Repos vom allgemeinen Linting ausnehmen (z.B. `flake8`, `black`) – nur unser eigener Code soll format-konform sein.
