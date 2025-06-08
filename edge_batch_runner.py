@@ -1,10 +1,15 @@
 #!/usr/bin/env python3.10
 from __future__ import annotations
-import os, sys, subprocess, pathlib, urllib.request, tkinter as tk
+import os
+import sys
+import subprocess
+import pathlib
+import urllib.request
+import tkinter as tk
 from tkinter import filedialog
-import cv2, numpy as np
-from PIL import Image
-import torch, tqdm              # torch.version.cuda statt Treiberversion
+import cv2
+import torch
+import tqdm  # torch.version.cuda statt Treiberversion
 
 ROOT = pathlib.Path(__file__).resolve().parent
 MODEL_DIR, WEIGHT_DIR = ROOT/"Models", ROOT/"weights"
@@ -48,9 +53,12 @@ MODELS = {
 for m in MODELS.values():
     clone(m["repo"]); wget(m["url"], m["file"])
 
-root = tk.Tk(); root.withdraw()
-in_dir = pathlib.Path(filedialog.askdirectory(title="Bilderordner wählen"))
-if not in_dir: sys.exit()
+root = tk.Tk()
+root.withdraw()
+folder = filedialog.askdirectory(title="Bilderordner wählen")
+if not folder:
+    sys.exit()
+in_dir = pathlib.Path(folder)
 
 EXT = {".jpg",".jpeg",".png",".bmp",".tif",".tiff",".webp"}
 out_dirs = {k:(in_dir/k).mkdir(exist_ok=True) or in_dir/k for k in MODELS}
