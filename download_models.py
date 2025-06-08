@@ -10,9 +10,16 @@ download_models.py – robust multi-mirror fetcher for PiDiNet, DiffusionEdge, E
 """
 
 from __future__ import annotations
-import hashlib, os, re, shutil, subprocess, sys, time
+
+import hashlib
+import re
+import shutil
+import subprocess
+import sys
+import time
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List
+
 import requests
 
 # ---------------------------------------------------------------------------- #
@@ -41,7 +48,7 @@ MODELS: Dict[str, Dict] = {
         "urls": [
             # small 43-MB first-stage weight (GitHub release) 3
             "https://github.com/GuHuangAI/DiffusionEdge/releases/download/v1.1/first_stage_total_320.pt",
-            # full SWIN weights (1.2 GB, public HF mirror, three domains) 
+            # full SWIN weights (1.2 GB, public HF mirror, three domains)
             "https://huggingface.co/hr16/Diffusion-Edge/resolve/main/diffusion_edge_natrual.pt",
             "https://huggingface.co/hr16/Diffusion-Edge/resolve/main/diffusion_edge_urban.pt",
             "https://huggingface.co/hr16/Diffusion-Edge/resolve/main/diffusion_edge_indoor.pt",
@@ -82,7 +89,7 @@ def gdrive_download(url: str, dst: Path) -> bool:
     if "drive.google.com" not in url:
         return False
     if shutil.which("gdown"):
-        cmd = ["gdown", "--fuzzy", url, "-O", dst]
+        cmd = ["gdown", "--fuzzy", url, "-O", str(dst)]
         return subprocess.call(cmd) == 0 and dst.exists()
 
     # manual fallback (wget two-step)
@@ -93,9 +100,7 @@ def gdrive_download(url: str, dst: Path) -> bool:
     response = session.get(url, stream=True)
     confirm = re.search(r"confirm=([0-9A-Za-z_]+)", response.text)
     if confirm:
-        dl_url = (
-            f"https://drive.google.com/uc?export=download&confirm={confirm.group(1)}&id={file_id.group(1)}"
-        )
+        dl_url = f"https://drive.google.com/uc?export=download&confirm={confirm.group(1)}&id={file_id.group(1)}"
         response = session.get(dl_url, stream=True)
     if response.status_code != 200:
         return False
