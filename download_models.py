@@ -26,7 +26,7 @@ import requests
 #  MODEL TABLE – highest-quality mirrors first                                 #
 # ---------------------------------------------------------------------------- #
 ROOT = Path(__file__).resolve().parent
-W_DIR = ROOT / "models" / "weights"
+W_DIR = ROOT / "weights"
 W_DIR.mkdir(parents=True, exist_ok=True)
 
 MODELS: Dict[str, Dict] = {

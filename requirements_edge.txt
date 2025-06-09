@@ -6,3 +6,4 @@ tqdm
 requests
 gdown
 accelerate           # für DiffusionEdge
+loguru
